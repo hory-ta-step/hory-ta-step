@@ -1,0 +1,153 @@
+# -*- coding: utf-8 -*-
+"""Збирання всіх шрифтів з sources/ у fonts/.
+
+Кожна тека sources/<назва>/ з family.json + glyphs.json — окрема гарнітура.
+Використання: python tools/build.py [назва-гарнітури]
+"""
+import json
+import sys
+from pathlib import Path
+
+from fontTools.fontBuilder import FontBuilder
+from fontTools.pens.ttGlyphPen import TTGlyphPen
+from fontTools.feaLib.builder import addOpenTypeFeaturesFromString
+
+sys.path.insert(0, str(Path(__file__).parent))
+from stroker import parse_subpaths, stroke_poly  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
+SOURCES = ROOT / 'sources'
+FONTS = ROOT / 'fonts'
+
+CONS_NAMES = {
+    'б': 'be', 'в': 've', 'г': 'he', 'ґ': 'ghe', 'д': 'de', 'ж': 'zhe',
+    'з': 'ze', 'к': 'ka', 'л': 'el', 'м': 'em', 'н': 'en', 'п': 'pe',
+    'р': 'er', 'с': 'es', 'т': 'te', 'ф': 'ef', 'х': 'kha', 'ц': 'tse',
+    'ч': 'che', 'ш': 'sha', 'щ': 'shcha', 'й': 'yot',
+}
+VOW_NAMES = {'а': 'a', 'о': 'o', 'у': 'u', 'е': 'e', 'и': 'y', 'і': 'i'}
+YOT = (('я', 'ya', 'а'), ('ю', 'yu', 'у'), ('є', 'ye', 'е'), ('ї', 'yi', 'і'))
+PUNCT_NAMES = {'.': 'period', ',': 'comma', '!': 'exclam', '?': 'question',
+               '-': 'hyphen', ':': 'colon'}
+NARROW = {'period', 'comma', 'apostrophe', 'colon'}
+
+FEA = """
+languagesystem DFLT dflt;
+languagesystem cyrl dflt;
+feature liga {
+    sub de zhe by dzhe;
+    sub de ze by dze;
+} liga;
+"""
+
+
+def build_style(fam, gset, style_name, cfg, out_dir):
+    scale = fam['scale']
+    base_y = fam['baseY']
+    adv = fam['advance']
+
+    def fx(x):
+        return round(x * scale)
+
+    def fy(y):
+        return round((base_y - y) * scale)
+
+    r_main = cfg['strokeWidth'] / 2
+    r_mark = cfg['markWidth'] / 2
+    cap = cfg['cap']
+
+    glyph_parts = {}
+    cmap = {0x20: 'space'}
+
+    def add(name, parts, codes=()):
+        glyph_parts[name] = parts
+        for c in codes:
+            cmap[ord(c)] = name
+
+    cons, vow, soft, punct = gset['cons'], gset['vow'], gset['soft'], gset['punct']
+    for ch, nm in CONS_NAMES.items():
+        add(nm, [(cons[ch], 16, r_main)], (ch, ch.upper()))
+    for ch, nm in VOW_NAMES.items():
+        add(nm, [(cons['_'], 16, r_main), (vow[ch], 0, r_mark)], (ch, ch.upper()))
+    for ch, nm, v in YOT:
+        add(nm, [(cons['й'], 16, r_main), (vow[v], 0, r_mark)], (ch, ch.upper()))
+    add('soft', [(soft, 34, r_mark)], ('ь', 'Ь'))
+    add('dzhe', [(cons['ДЖ'], 16, r_main)])
+    add('dze', [(cons['ДЗ'], 16, r_main)])
+    for ch, nm in PUNCT_NAMES.items():
+        add(nm, [(punct[ch], 16, r_mark)], (ch,))
+    add('apostrophe', [(punct["'"], 16, r_mark)])
+    cmap[0x2019] = 'apostrophe'
+    cmap[0x0027] = 'apostrophe'
+
+    order = ['.notdef', 'space'] + list(glyph_parts.keys())
+    fb = FontBuilder(fam['upm'], isTTF=True)
+    fb.setupGlyphOrder(order)
+    fb.setupCharacterMap(cmap)
+
+    glyphs, metrics = {}, {}
+    pen = TTGlyphPen(None)
+    glyphs['.notdef'] = pen.glyph()
+    metrics['.notdef'] = (adv, 0)
+    pen = TTGlyphPen(None)
+    glyphs['space'] = pen.glyph()
+    metrics['space'] = (fam['narrowAdvance'], 0)
+
+    for name, parts in glyph_parts.items():
+        pen = TTGlyphPen(None)
+        for d, ty, r in parts:
+            for sub in parse_subpaths(d):
+                shifted = [(x, y + ty) for x, y in sub]
+                poly = stroke_poly(shifted, r, cap=cap)
+                pen.moveTo((fx(poly[0][0]), fy(poly[0][1])))
+                for p in poly[1:]:
+                    pen.lineTo((fx(p[0]), fy(p[1])))
+                pen.closePath()
+        glyphs[name] = pen.glyph()
+        width = fam['narrowAdvance'] if name in NARROW else adv
+        metrics[name] = (width, 30)
+
+    fb.setupGlyf(glyphs)
+    fb.setupHorizontalMetrics(metrics)
+    fb.setupHorizontalHeader(ascent=fam['ascent'], descent=fam['descent'])
+    ps = f"{fam['familyPs']}-{style_name}"
+    fb.setupNameTable({
+        'familyName': fam['family'],
+        'styleName': style_name,
+        'fullName': f"{fam['family']} {style_name}",
+        'psName': ps,
+        'version': f"Version {fam['version']}",
+        'copyright': fam['copyright'],
+        'licenseDescription': fam['license'],
+    })
+    fb.setupOS2(sTypoAscender=fam['ascent'], sTypoDescender=fam['descent'],
+                usWinAscent=fam['ascent'] + 50, usWinDescent=-fam['descent'] + 40)
+    fb.setupPost()
+    addOpenTypeFeaturesFromString(fb.font, FEA)
+
+    out = out_dir / f'{ps}.ttf'
+    fb.save(out)
+    print(f'  ✓ {out.relative_to(ROOT)} ({len(order)} гліфів)')
+
+
+def build_family(src_dir):
+    fam = json.loads((src_dir / 'family.json').read_text(encoding='utf-8'))
+    sets = json.loads((src_dir / 'glyphs.json').read_text(encoding='utf-8'))
+    print(f'Гарнітура: {fam["family"]}')
+    FONTS.mkdir(exist_ok=True)
+    for style_name, cfg in fam['styles'].items():
+        build_style(fam, sets[cfg['set']], style_name, cfg, FONTS)
+
+
+def main():
+    only = sys.argv[1] if len(sys.argv) > 1 else None
+    families = [p for p in sorted(SOURCES.iterdir())
+                if (p / 'family.json').exists() and (only in (None, p.name))]
+    if not families:
+        sys.exit(f'Не знайдено гарнітур у {SOURCES}')
+    for src in families:
+        build_family(src)
+
+
+if __name__ == '__main__':
+    main()
