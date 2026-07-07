@@ -31,13 +31,55 @@ PUNCT_NAMES = {'.': 'period', ',': 'comma', '!': 'exclam', '?': 'question',
                '-': 'hyphen', ':': 'colon'}
 NARROW = {'period', 'comma', 'apostrophe', 'colon'}
 
-FEA = """
+def make_fea(fam):
+    """OpenType-фічі: лігатури, абугідні заміни (calt) та якорі (mark).
+
+    Голосна після приголосного (чи після марки м'якості, як у «тьо») стає
+    zero-width маркою над знаком; на початку слова, після голосної чи
+    апострофа лишається окремим знаком на кургані. Завиток м'якості після
+    приголосного стає маркою під знаком. mkmk не потрібен: марки не
+    накладаються з одного боку (одна голосна зверху, одна м'якість знизу).
+    """
+    def fx(x):
+        return round(x * fam['scale'])
+
+    def fy(y):
+        return round((fam['baseY'] - y) * fam['scale'])
+
+    cons = ' '.join(list(CONS_NAMES.values()) + ['dzhe', 'dze'])
+    vow = ' '.join(VOW_NAMES.values())
+    vmark = ' '.join(f'{n}.mark' for n in VOW_NAMES.values())
+    top = f'<anchor {fx(20)} {fy(7)}>'   # центр поля голосної (y 0..14)
+    bot = f'<anchor {fx(20)} {fy(72)}>'  # центр поля м'якості (y 66..78)
+    return f"""
 languagesystem DFLT dflt;
 languagesystem cyrl dflt;
-feature liga {
+
+@CONS = [{cons}];
+@VOW = [{vow}];
+@VOWMARK = [{vmark}];
+
+feature liga {{
     sub de zhe by dzhe;
     sub de ze by dze;
-} liga;
+}} liga;
+
+feature calt {{
+    sub @CONS soft' by soft.mark;
+    sub [@CONS soft.mark] @VOW' by @VOWMARK;
+}} calt;
+
+markClass @VOWMARK {top} @TOP;
+markClass soft.mark {bot} @BOTTOM;
+
+feature mark {{
+    pos base @CONS {top} mark @TOP
+               {bot} mark @BOTTOM;
+}} mark;
+
+table GDEF {{
+    GlyphClassDef [@CONS @VOW soft ya yu ye yi], , [@VOWMARK soft.mark], ;
+}} GDEF;
 """
 
 
@@ -74,6 +116,10 @@ def build_style(fam, gset, style_name, cfg, out_dir):
     add('soft', [(soft, 34, r_mark)], ('ь', 'Ь'))
     add('dzhe', [(cons['ДЖ'], 16, r_main)])
     add('dze', [(cons['ДЗ'], 16, r_main)])
+    # Zero-width марки абугіди: голосна над знаком, м'якість під ним
+    for ch, nm in VOW_NAMES.items():
+        add(f'{nm}.mark', [(vow[ch], 0, r_mark)])
+    add('soft.mark', [(soft, 66, r_mark)])
     for ch, nm in PUNCT_NAMES.items():
         add(nm, [(punct[ch], 16, r_mark)], (ch,))
     add('apostrophe', [(punct["'"], 16, r_mark)])
@@ -104,7 +150,12 @@ def build_style(fam, gset, style_name, cfg, out_dir):
                     pen.lineTo((fx(p[0]), fy(p[1])))
                 pen.closePath()
         glyphs[name] = pen.glyph()
-        width = fam['narrowAdvance'] if name in NARROW else adv
+        if name.endswith('.mark'):
+            width = 0
+        elif name in NARROW:
+            width = fam['narrowAdvance']
+        else:
+            width = adv
         metrics[name] = (width, 30)
 
     fb.setupGlyf(glyphs)
@@ -123,7 +174,7 @@ def build_style(fam, gset, style_name, cfg, out_dir):
     fb.setupOS2(sTypoAscender=fam['ascent'], sTypoDescender=fam['descent'],
                 usWinAscent=fam['ascent'] + 50, usWinDescent=-fam['descent'] + 40)
     fb.setupPost()
-    addOpenTypeFeaturesFromString(fb.font, FEA)
+    addOpenTypeFeaturesFromString(fb.font, make_fea(fam))
 
     out = out_dir / f'{ps}.ttf'
     fb.save(out)

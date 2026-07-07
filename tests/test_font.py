@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import pytest
+import uharfbuzz as hb
 from fontTools.ttLib import TTFont
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -10,10 +11,30 @@ TTFS = sorted((ROOT / 'fonts').glob('*.ttf'))
 
 UKR = "абвгґдежзиійклмнопрстуфхцчшщьюяєї"
 
+MARKS = ('a.mark', 'o.mark', 'u.mark', 'e.mark', 'y.mark', 'i.mark',
+         'soft.mark')
+
 
 @pytest.fixture(params=TTFS, ids=[p.stem for p in TTFS])
-def font(request):
-    return TTFont(request.param)
+def ttf_path(request):
+    return request.param
+
+
+@pytest.fixture
+def font(ttf_path):
+    return TTFont(ttf_path)
+
+
+def shape(ttf_path, text):
+    """(ім'я гліфа, позиція) після шейпінгу HarfBuzz."""
+    order = TTFont(ttf_path).getGlyphOrder()
+    hbfont = hb.Font(hb.Face(hb.Blob.from_file_path(str(ttf_path))))
+    buf = hb.Buffer()
+    buf.add_str(text)
+    buf.guess_segment_properties()
+    hb.shape(hbfont, buf)
+    return [(order[i.codepoint], p)
+            for i, p in zip(buf.glyph_infos, buf.glyph_positions)]
 
 
 def test_fonts_built():
@@ -58,3 +79,49 @@ def test_metrics(font):
     cmap = font.getBestCmap()
     widths = {hmtx[cmap[ord(ch)]][0] for ch in UKR}
     assert all(w > 0 for w in widths)
+
+
+def test_marks_zero_width(font):
+    hmtx = font['hmtx']
+    for nm in MARKS:
+        assert hmtx[nm][0] == 0, f'Марка {nm} має ненульову ширину'
+
+
+def test_gdef_mark_classes(font):
+    classdefs = font['GDEF'].table.GlyphClassDef.classDefs
+    for nm in MARKS:
+        assert classdefs[nm] == 3, f'{nm} не позначена як mark у GDEF'
+    assert classdefs['te'] == 1, 'приголосний не позначений як base'
+
+
+def test_abugida_vowel_attaches(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'та')]
+    assert names == ['te', 'a.mark']
+
+
+def test_abugida_word_initial_vowel_standalone(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'ана')]
+    assert names == ['a', 'en', 'a.mark']
+
+
+def test_abugida_soft_and_vowel_stack(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'тьох')]
+    assert names == ['te', 'soft.mark', 'o.mark', 'kha']
+
+
+def test_abugida_ligature_takes_mark(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'джміль')]
+    assert names == ['dzhe', 'em', 'i.mark', 'el', 'soft.mark']
+
+
+def test_abugida_apostrophe_breaks_syllable(ttf_path):
+    names = [n for n, _ in shape(ttf_path, "м'яч")]
+    assert names == ['em', 'apostrophe', 'ya', 'che']
+
+
+def test_mark_positioning(ttf_path):
+    (_, base_pos), (_, mark_pos) = shape(ttf_path, 'та')
+    assert mark_pos.x_advance == 0
+    # якорі збігаються, тож марка повертається рівно на початок знака
+    assert mark_pos.x_offset == -base_pos.x_advance
+    assert mark_pos.y_offset == 0
