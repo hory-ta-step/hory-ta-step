@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Гори та Степ — казкова абугіда української мови</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,500;0,600;0,700;1,500;1,600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap&subset=cyrillic" rel="stylesheet">
+<style>
+:root{
+  --night:#1B2A23;      /* смерековий присмерк — тло */
+  --moss:#24352C;       /* мох — картки */
+  --ivory:#EDE4CE;      /* пергамент — текст */
+  --sage:#93A98F;       /* шавлія — другорядний текст */
+  --gold:#D3AE62;       /* старе золото — чорнило гліфів */
+  --line:#3A4C40;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  .ink path{animation:none!important;stroke-dashoffset:0!important}
+}
+body{
+  background:
+    radial-gradient(1100px 500px at 75% -100px, #2B4033 0%, transparent 60%),
+    radial-gradient(800px 600px at -10% 40%, #223528 0%, transparent 55%),
+    var(--night);
+  color:var(--ivory);
+  font-family:'IBM Plex Sans',sans-serif;
+  font-size:17px;line-height:1.65;
+}
+.wrap{max-width:980px;margin:0 auto;padding:0 20px}
+header{padding:64px 0 8px}
+.eyebrow{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--sage);margin-bottom:16px}
+.eyebrow::before{content:"✦  ";color:var(--gold)}
+h1{
+  font-family:'Cormorant',serif;font-weight:600;font-style:italic;
+  font-size:clamp(38px,7vw,64px);line-height:1.08;letter-spacing:.01em;
+}
+h1 .accent{color:var(--gold);font-style:normal;font-weight:500}
+.lede{max-width:640px;margin-top:18px;color:var(--sage)}
+h2{
+  font-family:'Cormorant',serif;font-weight:600;font-style:italic;
+  font-size:clamp(26px,4vw,34px);margin-bottom:6px;
+}
+h2::after{content:"  ✦";color:var(--gold);font-size:.55em;vertical-align:middle}
+section{padding:40px 0}
+.sub{color:var(--sage);margin-bottom:22px;max-width:680px}
+.vine{margin:8px 0 0;opacity:.7}
+
+/* --- чорнило: гліфи сяють і пишуться пером --- */
+.glyph{color:var(--gold);filter:drop-shadow(0 0 5px rgba(211,174,98,.45))}
+.ink path{
+  stroke-dasharray:1;
+  stroke-dashoffset:1;
+  animation:write .8s ease forwards;
+}
+@keyframes write{to{stroke-dashoffset:0}}
+
+/* --- транслітератор --- */
+.demo{
+  background:linear-gradient(180deg, #263A2E 0%, var(--moss) 100%);
+  border:1px solid var(--line);border-radius:20px;padding:24px;margin-top:32px;
+  box-shadow:0 18px 50px rgba(0,0,0,.35);
+}
+.demo textarea{
+  width:100%;min-height:74px;resize:vertical;
+  font-family:'IBM Plex Sans',sans-serif;font-size:17px;color:var(--ivory);
+  background:transparent;border:none;border-bottom:1px solid var(--line);
+  padding:8px 4px;outline:none;
+}
+.demo textarea:focus{border-bottom-color:var(--gold)}
+.modes{display:flex;gap:8px;margin:16px 0 4px;flex-wrap:wrap}
+.modes button{
+  font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;
+  border:1px solid var(--line);background:transparent;color:var(--sage);
+  border-radius:999px;padding:7px 16px;cursor:pointer;
+}
+.modes button[aria-pressed="true"]{background:var(--gold);color:#22301F;border-color:var(--gold)}
+.modes button:focus-visible{outline:3px solid var(--ivory);outline-offset:2px}
+#canvas{overflow-x:auto;padding:20px 4px 8px;min-height:120px}
+#canvas svg{display:block}
+
+/* --- логіка знаків --- */
+.logic{display:grid;grid-template-columns:1fr;gap:10px;max-width:680px}
+@media(min-width:720px){.logic{grid-template-columns:1fr 1fr}}
+.logic div{
+  background:var(--moss);border:1px solid var(--line);border-radius:12px;
+  padding:12px 16px;font-size:15px;color:#CFC8B4;
+}
+.logic b{color:var(--ivory);font-weight:600}
+
+/* --- таблиці гліфів --- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:10px}
+.cell{
+  background:var(--moss);border:1px solid var(--line);border-radius:14px;
+  padding:12px 8px 10px;text-align:center;
+}
+.cell svg{display:block;margin:0 auto}
+.cell .lbl{font-family:'Cormorant',serif;font-weight:700;font-size:19px;margin-top:6px}
+.cell .note{font-size:12px;color:var(--sage)}
+.cell.special{border-color:rgba(211,174,98,.55)}
+
+/* --- правила --- */
+.rules{display:grid;grid-template-columns:1fr;gap:14px}
+@media(min-width:720px){.rules{grid-template-columns:1fr 1fr}}
+.rule{background:var(--moss);border:1px solid var(--line);border-radius:16px;padding:20px 22px}
+.rule h3{font-family:'Cormorant',serif;font-style:italic;font-weight:600;font-size:21px;margin-bottom:6px;color:var(--ivory)}
+.rule p{font-size:15px;color:#CFC8B4}
+.rule .ex{margin-top:12px}
+footer{padding:44px 0 64px;color:var(--sage);font-size:14px;text-align:center}
+footer::before{content:"✦ ✦ ✦";display:block;color:var(--gold);letter-spacing:.6em;margin-bottom:14px;opacity:.8}
+code{background:#1A261F;border:1px solid var(--line);border-radius:5px;padding:1px 6px;font-size:14px;color:var(--ivory)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Конскрипт · казкова абугіда для української мови</div>
+  <h1>Гори <span class="accent">та</span> Степ</h1>
+  <p class="lede">Письмо старого краю, що не наслідує жодну людську абетку. Форма кожного знака народжується зі звуку: стебло, дуга, петля і розчерк складаються за правилами, як гілки одного дерева. Голосні — легкі знаки-зорі над горою, м'якість — завиток вітру під нею. Пишуть у два способи: «степом», рядком за обрій, і «горами», коли склади здіймаються пасмами.</p>
+  <svg class="vine" width="260" height="16" viewBox="0 0 260 16" aria-hidden="true">
+    <path d="M2 8 Q30 0 58 8 Q86 16 114 8 Q130 4 130 8 Q130 4 146 8 Q174 16 202 8 Q230 0 258 8" fill="none" stroke="var(--gold)" stroke-width="1.4" opacity=".8"/>
+    <circle cx="130" cy="8" r="2.4" fill="var(--gold)"/>
+  </svg>
+
+  <div class="demo">
+    <label for="inp" style="font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--sage)">Введіть текст українською</label>
+    <textarea id="inp" spellcheck="false">Реве та стогне Дніпр широкий, сердитий вітер завива.</textarea>
+    <div class="modes" role="group" aria-label="Режим письма">
+      <button id="btnH" aria-pressed="true">🌾 Степ — горизонтально</button>
+      <button id="btnV" aria-pressed="false">⛰ Гори — вертикально</button>
+    </div>
+    <div class="modes" role="group" aria-label="Стиль письма">
+      <button id="btnHand" aria-pressed="true">✒ Рукописний</button>
+      <button id="btnPrint" aria-pressed="false">🖨 Друкований</button>
+    </div>
+    <div id="canvas" aria-label="Текст, записаний скриптом"></div>
+    <div id="hint" style="font-size:13px;color:var(--sage);border-top:1px solid var(--line);padding-top:10px;margin-top:6px;display:none"></div>
+  </div>
+</header>
+
+<section>
+  <h2>Логіка знаків</h2>
+  <p class="sub">Це фонетичне письмо: знак не малює літеру, а кодує сам звук. Побачивши незнайомий гліф, його можна «прочитати» за будовою:</p>
+  <div class="logic">
+    <div><b>Пряме стебло з ніжкою</b> — проривні звуки: п, б, т, д, к, ґ, ц, ч</div>
+    <div><b>Хвилясте стебло</b> — протяжні звуки «течуть»: ф, в, с, з, ш, ж, х, г</div>
+    <div><b>Дуга праворуч</b> — губні: п, б, ф, в, м</div>
+    <div><b>Дуга ліворуч</b> — зубні та шиплячі: т, д, с, з, н, ц, ч, ш, ж</div>
+    <div><b>Замкнена дуга</b> — дзвінкий звук; <b>відкрита</b> — глухий</div>
+    <div><b>Петля крізь стебло</b> — задньоязикові: к, ґ, х, г</div>
+    <div><b>Подвоєна дуга або завиток на кінці</b> — шиплячі й носові</div>
+    <div><b>Вільний розчерк без стебла</b> — плавні: л, р, й</div>
+  </div>
+</section>
+
+<section>
+  <h2>Приголосні — гори</h2>
+  <p class="sub">Риска під знаком — печать африкати (ц, дз). Знак й — листок, ∅ — курган: носій для голосної без приголосного.</p>
+  <div class="grid" id="consGrid"></div>
+</section>
+
+<section>
+  <h2>Голосні — степ</h2>
+  <p class="sub">Шість фонем — шість легких знаків над горою: розчерк (а), завиток (о), крапля (у), хвиля трав (е), дві зорі (и), одна зоря (і). Голосна на початку слова чи після іншої сідає над курган ∅.</p>
+  <div class="grid" id="vowGrid"></div>
+</section>
+
+<section>
+  <h2>Правила</h2>
+  <div class="rules">
+    <div class="rule">
+      <h3>М'якість — вітер під знаком</h3>
+      <p>Замість м'якого знака під горою в'ється тонкий завиток вітру: <code>ь</code> → завиток без голосної; <code>ля, ню, сє</code> → завиток + знак а/у/е вгорі.</p>
+      <div class="ex" data-ex="день"></div>
+    </div>
+    <div class="rule">
+      <h3>Йотовані</h3>
+      <p>Після приголосного <code>я ю є</code> = вітер + а/у/е. На початку слова, після голосної чи апострофа — листок <code>й</code> зі знаком угорі. <code>ї</code> — завжди й+і.</p>
+      <div class="ex" data-ex="Україна"></div>
+    </div>
+    <div class="rule">
+      <h3>Апостроф</h3>
+      <p>Апостроф нічого не пише — він лише розриває склад: <code>б'ю</code> = тверде б + листок-й зі знаком у.</p>
+      <div class="ex" data-ex="м'яч"></div>
+    </div>
+    <div class="rule">
+      <h3>Лігатури</h3>
+      <p><code>щ</code> — лігатура ш+ч: знак ш із хвостом-розчерком; <code>дж</code> і <code>дз</code> — дзвінкі дуги з печаттю африкати.</p>
+      <div class="ex" data-ex="дощ"></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  Структура натхнена абугідою «Cloud and Rain» (Omniglot), фонетична побудова знаків — тенґваром Толкіна,<br>а мотив — українськими горами і степом. Гліфи — умовний авторський дизайн.
+</footer>
+</div>
+
+<script>
+/* ============ ГЛІФИ ============ */
+/* Фонетична побудова: пряме стебло з ніжкою = проривні, хвилясте = протяжні, коротке без ніжки = носові;
+   дуга праворуч = губні, ліворуч = зубні/шиплячі; замкнена = дзвінкі, відкрита = глухі;
+   петля крізь стебло = задньоязикові; розчерк без стебла = плавні; риска = африката. */
+const CONS = {
+ /* губні — дуга праворуч */
+ 'п':"M13 8 V42 Q13 47 7 45 M13 16 Q33 11 31 28",
+ 'б':"M13 8 V42 Q13 47 7 45 M13 16 Q35 11 33 23 Q31 34 13 31",
+ 'ф':"M13 6 Q9 16 13 26 Q17 36 13 46 M13 14 Q33 9 31 26",
+ 'в':"M13 6 Q9 16 13 26 Q17 36 13 46 M13 14 Q35 9 33 21 Q31 32 13 29",
+ 'м':"M13 12 V40 M13 15 Q30 11 28 20 Q26 27 13 25 M13 26 Q30 23 28 32 Q26 39 13 37",
+ /* зубні — дуга ліворуч */
+ 'т':"M27 8 V42 Q27 47 33 45 M27 16 Q7 11 9 28",
+ 'д':"M27 8 V42 Q27 47 33 45 M27 16 Q5 11 7 23 Q9 34 27 31",
+ 'с':"M27 6 Q31 16 27 26 Q23 36 27 46 M27 14 Q7 9 9 26",
+ 'з':"M27 6 Q31 16 27 26 Q23 36 27 46 M27 14 Q5 9 7 21 Q9 32 27 29",
+ 'н':"M27 12 V40 M27 15 Q10 11 12 20 Q14 27 27 25 M27 26 Q10 23 12 32 Q14 39 27 37",
+ /* африкати — печать-риска */
+ 'ц':"M27 8 V42 Q27 47 33 45 M27 16 Q7 11 9 28 M20 36 H36",
+ 'дз':"M27 8 V42 Q27 47 33 45 M27 16 Q5 11 7 23 Q9 34 27 31 M20 38 H36",
+ /* шиплячі — завиток на кінці дуги / подвоєння */
+ 'ч':"M27 8 V42 Q27 47 33 45 M27 16 Q7 11 9 24 Q10 30 16 27",
+ 'дж':"M27 8 V42 Q27 47 33 45 M27 16 Q5 11 7 24 Q9 32 16 29 Q21 27 20 23 M20 38 H36",
+ 'ш':"M27 6 Q31 16 27 26 Q23 36 27 46 M27 12 Q7 7 9 18 Q10 23 15 21 M27 24 Q7 19 9 30 Q10 35 15 33",
+ 'ж':"M27 6 Q31 16 27 26 Q23 36 27 46 M27 12 Q5 7 7 16 Q9 23 27 21 M27 23 Q5 19 7 28 Q9 35 27 33",
+ 'щ':"M27 6 Q31 16 27 26 Q23 36 27 46 M27 12 Q7 7 9 18 Q10 23 15 21 M27 24 Q7 19 9 30 Q10 35 15 33 M27 46 Q34 48 35 41",
+ /* задньоязикові — петля крізь стебло */
+ 'к':"M20 8 V42 Q20 47 26 45 M6 22 Q20 10 34 22",
+ 'ґ':"M20 8 V42 Q20 47 26 45 M6 22 Q20 10 34 22 Q20 34 6 22",
+ 'х':"M20 6 Q16 16 20 26 Q24 36 20 46 M6 20 Q20 8 34 20",
+ 'г':"M20 6 Q16 16 20 26 Q24 36 20 46 M6 20 Q20 8 34 20 Q20 32 6 20",
+ /* плавні — вільні розчерки */
+ 'л':"M6 44 Q10 14 20 10 Q30 6 34 13 Q35 18 30 18",
+ 'р':"M6 44 Q10 16 19 12 Q27 9 29 15 Q30 21 23 21 Q31 23 35 32 Q37 37 33 38",
+ 'й':"M20 6 Q9 19 13 33 Q16 43 23 38 Q30 33 26 19 Q24 11 20 6",
+ '_':"M8 34 Q20 22 32 34 Q20 30 8 34" /* курган-носій */
+};
+/* Голосні — знаки-зорі над горою, поле 40×14 */
+const VOW = {
+ 'а':"M12 12 Q19 2 28 5",
+ 'о':"M25 4 Q14 3 15 9 Q16 14 22 12 Q28 10 25 4",
+ 'у':"M14 3 Q23 3 22 12",
+ 'е':"M10 9 Q15 2 20 8 Q25 14 30 7",
+ 'и':"M13 6 Q15 6 15 8 Q15 10 13 10 Q11 10 11 8 Q11 6 13 6 M27 6 Q29 6 29 8 Q29 10 27 10 Q25 10 25 8 Q25 6 27 6",
+ 'і':"M20 5 Q22 5 22 8 Q22 11 20 11 Q18 11 18 8 Q18 5 20 5"
+};
+/* М'якість — завиток вітру під знаком, поле 40×12 */
+const SOFT = "M13 3 Q17 11 23 9 Q29 7 28 2 Q27 6 31 7";
+
+/* ============ ДРУКОВАНИЙ СТИЛЬ ============ */
+/* Та сама фонетична логіка, але геометрія: прямі стебла з засічками,
+   правильні дуги-кола, прямі кути замість розчерків. */
+const CONS_P = {
+ /* губні — дуга праворуч */
+ 'п':"M13 8 V42 M8 42 H18 M13 16 Q31 16 31 30",
+ 'б':"M13 8 V42 M8 42 H18 M13 16 Q33 16 33 25 Q33 34 13 34",
+ 'ф':"M13 6 Q18 16 13 26 Q8 36 13 46 M13 14 Q31 14 31 28",
+ 'в':"M13 6 Q18 16 13 26 Q8 36 13 46 M13 14 Q33 14 33 23 Q33 32 13 32",
+ 'м':"M13 12 V40 M13 15 Q29 15 29 20 Q29 25 13 25 M13 27 Q29 27 29 32 Q29 37 13 37",
+ /* зубні — дуга ліворуч */
+ 'т':"M27 8 V42 M22 42 H32 M27 16 Q9 16 9 30",
+ 'д':"M27 8 V42 M22 42 H32 M27 16 Q7 16 7 25 Q7 34 27 34",
+ 'с':"M27 6 Q22 16 27 26 Q32 36 27 46 M27 14 Q9 14 9 28",
+ 'з':"M27 6 Q22 16 27 26 Q32 36 27 46 M27 14 Q7 14 7 23 Q7 32 27 32",
+ 'н':"M27 12 V40 M27 15 Q11 15 11 20 Q11 25 27 25 M27 27 Q11 27 11 32 Q11 37 27 37",
+ /* африкати — печать-риска */
+ 'ц':"M27 8 V42 M22 42 H32 M27 16 Q9 16 9 30 M20 36 H36",
+ 'дз':"M27 8 V42 M22 42 H32 M27 16 Q7 16 7 25 Q7 34 27 34 M20 38 H36",
+ /* шиплячі — гачок на кінці дуги / подвоєння */
+ 'ч':"M27 8 V42 M22 42 H32 M27 16 Q9 16 9 26 L15 26",
+ 'дж':"M27 8 V42 M22 42 H32 M27 16 Q7 16 7 26 L15 26 L15 21 M20 38 H36",
+ 'ш':"M27 6 Q22 16 27 26 Q32 36 27 46 M27 12 Q10 12 10 19 L15 19 M27 24 Q10 24 10 31 L15 31",
+ 'ж':"M27 6 Q22 16 27 26 Q32 36 27 46 M27 12 Q8 12 8 16 Q8 21 27 21 M27 23 Q8 23 8 27 Q8 32 27 32",
+ 'щ':"M27 6 Q22 16 27 26 Q32 36 27 46 M27 12 Q10 12 10 19 L15 19 M27 24 Q10 24 10 31 L15 31 M27 46 H35 V39",
+ /* задньоязикові — петля крізь стебло */
+ 'к':"M20 8 V42 M15 42 H25 M6 22 Q20 12 34 22",
+ 'ґ':"M20 8 V42 M15 42 H25 M6 22 Q20 12 34 22 Q20 32 6 22",
+ 'х':"M20 6 Q25 16 20 26 Q15 36 20 46 M6 20 Q20 10 34 20",
+ 'г':"M20 6 Q25 16 20 26 Q15 36 20 46 M6 20 Q20 10 34 20 Q20 30 6 20",
+ /* плавні — без стебла */
+ 'л':"M8 44 Q12 12 26 12 H34",
+ 'р':"M8 44 Q12 14 23 14 Q30 14 30 19 Q30 24 22 23 L33 38",
+ 'й':"M20 6 L12 25 L20 42 L28 25 L20 6",
+ '_':"M8 32 L20 24 L32 32"
+};
+const VOW_P = {
+ 'а':"M12 10 L28 4",
+ 'о':"M20 3 Q26 3 26 8 Q26 13 20 13 Q14 13 14 8 Q14 3 20 3",
+ 'у':"M20 2 V12",
+ 'е':"M10 9 L15 3 L20 9 L25 3 L30 9",
+ 'и':"M13 6 Q15 6 15 8 Q15 10 13 10 Q11 10 11 8 Q11 6 13 6 M27 6 Q29 6 29 8 Q29 10 27 10 Q25 10 25 8 Q25 6 27 6",
+ 'і':"M20 5 Q22 5 22 8 Q22 11 20 11 Q18 11 18 8 Q18 5 20 5"
+};
+const SOFT_P = "M14 2 L20 9 L28 3";
+
+const STYLES = {
+ hand: {cons:CONS, vow:VOW, soft:SOFT, cap:'round', w:'2.7', wv:'2.3', ws:'2.1'},
+ print:{cons:CONS_P, vow:VOW_P, soft:SOFT_P, cap:'butt', w:'3.1', wv:'2.6', ws:'2.6'}
+};
+let styleMode = 'hand';
+
+/* ============ ТОКЕНІЗАЦІЯ ============ */
+const YOT = {'я':'а','ю':'у','є':'е'};
+const VOWELS = 'аоуеиі';
+function tokenize(text){
+  const t = text.toLowerCase().replace(/['’ʼ]/g,"'");
+  const units = [];
+  let i = 0;
+  while(i < t.length){
+    const ch = t[i];
+    if(ch === ' '){ units.push({sp:true}); i++; continue; }
+    if(ch === '\n'){ units.push({br:true}); i++; continue; }
+    let cons = null;
+    if(ch === 'д' && (t[i+1] === 'ж' || t[i+1] === 'з')){ cons = 'д'+t[i+1]; i += 2; }
+    else if(CONS[ch] && ch !== '_'){ cons = ch; i++; }
+    if(cons){
+      const u = {c:cons, v:null, soft:false};
+      if(t[i] === 'ь'){ u.soft = true; i++; }
+      else if(YOT[t[i]] && cons !== 'й'){ u.soft = true; u.v = YOT[t[i]]; i++; }
+      else if(VOWELS.includes(t[i])){ u.v = t[i]; i++; }
+      units.push(u);
+      continue;
+    }
+    if(ch === "'"){ i++; continue; }
+    if(VOWELS.includes(ch)){ units.push({c:'_', v:ch, soft:false}); i++; continue; }
+    if(YOT[ch]){ units.push({c:'й', v:YOT[ch], soft:false}); i++; continue; }
+    if(ch === 'ї'){ units.push({c:'й', v:'і', soft:false}); i++; continue; }
+    if('.,!?;:—–-…()«»"'.includes(ch)){ units.push({punct:ch}); i++; continue; }
+    i++;
+  }
+  return units;
+}
+
+/* ============ РЕНДЕР ============ */
+/* Будова складу: зоря (0..14) · гора (16..64) · вітер (66..78) */
+const NS = 'http://www.w3.org/2000/svg';
+function unitGroup(u, x, y, animate, delay){
+  const S = STYLES[styleMode];
+  const g = document.createElementNS(NS,'g');
+  g.setAttribute('transform',`translate(${x},${y})`);
+  const mk = (d, ty, w) => {
+    const p = document.createElementNS(NS,'path');
+    p.setAttribute('d', d);
+    p.setAttribute('fill','none');
+    p.setAttribute('stroke','currentColor');
+    p.setAttribute('stroke-width', w || S.w);
+    p.setAttribute('stroke-linecap', S.cap);
+    p.setAttribute('stroke-linejoin', styleMode === 'print' ? 'miter' : 'round');
+    p.setAttribute('pathLength','1');
+    p.setAttribute('transform',`translate(0,${ty})`);
+    if(animate) p.style.animationDelay = (delay*45)+'ms';
+    g.appendChild(p);
+  };
+  if(u.v) mk(S.vow[u.v], 0, S.wv);
+  mk(S.cons[u.c], 16);
+  if(u.soft) mk(S.soft, 66, S.ws);
+  return g;
+}
+function render(){
+  const units = tokenize(document.getElementById('inp').value);
+  const cnv = document.getElementById('canvas');
+  cnv.innerHTML = '';
+  const svg = document.createElementNS(NS,'svg');
+  svg.classList.add('glyph','ink');
+  const CW = 46, CH = 84;
+  let delay = 0;
+  if(mode === 'h'){
+    let x = 4, y = 4, maxX = 0;
+    const wrapW = Math.max(cnv.clientWidth - 20, 300);
+    units.forEach(u => {
+      if(u.br || (x > wrapW - CW)){ y += CH + 10; x = 4; if(u.br) return; }
+      if(u.sp){ x += 22; return; }
+      if(u.punct){
+        const t = document.createElementNS(NS,'text');
+        t.setAttribute('x', x); t.setAttribute('y', y + 54);
+        t.setAttribute('fill','currentColor'); t.setAttribute('font-size','22');
+        t.textContent = u.punct; svg.appendChild(t); x += 18; return;
+      }
+      svg.appendChild(unitGroup(u, x, y, true, delay++));
+      x += CW; maxX = Math.max(maxX, x);
+    });
+    svg.setAttribute('width', Math.max(maxX + 10, 200));
+    svg.setAttribute('height', y + CH + 6);
+  } else {
+    /* ГОРИ: одне слово = одна колонка. Колонки читаються справа наліво,
+       склади в колонці — згори вниз. Якщо слово довше за colH складів,
+       воно триває в наступній колонці ліворуч — це позначає риска-місток
+       унизу колонки. */
+    const colH = 6;
+    const cols = []; /* {units:[], cont:bool} */
+    let word = [];
+    const flushWord = () => {
+      for(let s = 0; s < word.length; s += colH){
+        const chunk = word.slice(s, s + colH);
+        cols.push({units: chunk, cont: s + colH < word.length});
+      }
+      word = [];
+    };
+    units.forEach(u => {
+      if(u.sp || u.br || u.punct){ if(word.length) flushWord(); return; }
+      word.push(u);
+    });
+    if(word.length) flushWord();
+    const W = cols.length * CW + 30;
+    const H = colH * (CH - 8) + 30;
+    /* стрілка напряму читання (справа наліво) над колонками */
+    const arr = document.createElementNS(NS,'path');
+    arr.setAttribute('d', `M${W - 8} 8 H${W - 40} M${W - 34} 3 L${W - 40} 8 L${W - 34} 13`);
+    arr.setAttribute('fill','none'); arr.setAttribute('stroke','currentColor');
+    arr.setAttribute('stroke-width','1.6'); arr.setAttribute('stroke-linecap','round');
+    arr.setAttribute('opacity','.55');
+    svg.appendChild(arr);
+    cols.forEach((c, ci) => {
+      const x = W - (ci + 1) * CW - 8;
+      /* тонка напрямна праворуч від колонки */
+      if(ci > 0){
+        const guide = document.createElementNS(NS,'line');
+        guide.setAttribute('x1', x + CW); guide.setAttribute('x2', x + CW);
+        guide.setAttribute('y1', 22); guide.setAttribute('y2', H - 8);
+        guide.setAttribute('stroke','currentColor'); guide.setAttribute('stroke-width','1');
+        guide.setAttribute('opacity','.14');
+        svg.appendChild(guide);
+      }
+      c.units.forEach((u, ri) => { svg.appendChild(unitGroup(u, x, 22 + ri * (CH - 8), true, delay++)); });
+      /* риска-місток: слово триває в наступній колонці */
+      if(c.cont){
+        const tie = document.createElementNS(NS,'path');
+        const ty = 22 + c.units.length * (CH - 8) - 14;
+        tie.setAttribute('d', `M${x + 14} ${ty} Q${x + 4} ${ty + 8} ${x - 6} ${ty}`);
+        tie.setAttribute('fill','none'); tie.setAttribute('stroke','currentColor');
+        tie.setAttribute('stroke-width','1.8'); tie.setAttribute('stroke-linecap','round');
+        tie.setAttribute('opacity','.7');
+        svg.appendChild(tie);
+      }
+    });
+    svg.setAttribute('width', Math.max(W, 200));
+    svg.setAttribute('height', H);
+  }
+  cnv.appendChild(svg);
+  const hint = document.getElementById('hint');
+  if(mode === 'v'){
+    hint.style.display = 'block';
+    hint.textContent = 'Як читати «гори»: колонки йдуть справа наліво (за стрілкою), склади в колонці — згори вниз. Кожна колонка — одне слово; дужка внизу колонки означає, що слово триває в наступній колонці ліворуч.';
+  } else {
+    hint.style.display = 'none';
+  }
+}
+let mode = 'h';
+let debounce;
+document.getElementById('inp').addEventListener('input', () => {
+  clearTimeout(debounce); debounce = setTimeout(render, 250);
+});
+const bH = document.getElementById('btnH'), bV = document.getElementById('btnV');
+bH.onclick = () => { mode='h'; bH.setAttribute('aria-pressed','true'); bV.setAttribute('aria-pressed','false'); render(); };
+bV.onclick = () => { mode='v'; bV.setAttribute('aria-pressed','true'); bH.setAttribute('aria-pressed','false'); render(); };
+const bHand = document.getElementById('btnHand'), bPrint = document.getElementById('btnPrint');
+bHand.onclick = () => { styleMode='hand'; bHand.setAttribute('aria-pressed','true'); bPrint.setAttribute('aria-pressed','false'); render(); buildTables(); };
+bPrint.onclick = () => { styleMode='print'; bPrint.setAttribute('aria-pressed','true'); bHand.setAttribute('aria-pressed','false'); render(); buildTables(); };
+window.addEventListener('resize', () => { clearTimeout(debounce); debounce = setTimeout(render, 250); });
+
+/* ============ ТАБЛИЦІ ============ */
+function miniSVG(u, scale){
+  const s = scale || 1;
+  const svg = document.createElementNS(NS,'svg');
+  svg.classList.add('glyph');
+  svg.setAttribute('width', 46*s); svg.setAttribute('height', 84*s);
+  svg.setAttribute('viewBox','0 0 46 84');
+  svg.appendChild(unitGroup(u, 3, 0, false, 0));
+  return svg;
+}
+function buildTables(){
+  const consGrid = document.getElementById('consGrid');
+  consGrid.innerHTML = '';
+  const NOTE = {'дж':'лігатура','дз':'лігатура','щ':'лігатура ш+ч','й':'листок','_':'курган-носій','ц':'африката','ч':'африката'};
+  Object.keys(CONS).forEach(k => {
+    const cell = document.createElement('div');
+    cell.className = 'cell' + (['дж','дз','щ','й','_'].includes(k) ? ' special' : '');
+    cell.appendChild(miniSVG({c:k}, .82));
+    const l = document.createElement('div'); l.className='lbl'; l.textContent = (k==='_' ? '∅' : k); cell.appendChild(l);
+    if(NOTE[k]){ const n = document.createElement('div'); n.className='note'; n.textContent = NOTE[k]; cell.appendChild(n); }
+    consGrid.appendChild(cell);
+  });
+  const vowGrid = document.getElementById('vowGrid');
+  vowGrid.innerHTML = '';
+  Object.keys(VOW).forEach(v => {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.appendChild(miniSVG({c:'_', v:v}, .82));
+    const l = document.createElement('div'); l.className='lbl'; l.textContent = v; cell.appendChild(l);
+    vowGrid.appendChild(cell);
+  });
+  document.querySelectorAll('.ex').forEach(el => {
+    el.innerHTML = '';
+    const word = el.dataset.ex;
+    const svg = document.createElementNS(NS,'svg');
+    svg.classList.add('glyph');
+    const units = tokenize(word).filter(u => u.c);
+    svg.setAttribute('width', units.length*40 + 8); svg.setAttribute('height', 74);
+    svg.setAttribute('viewBox', `0 0 ${units.length*46 + 8} 84`);
+    units.forEach((u,i) => svg.appendChild(unitGroup(u, 4 + i*46, 0, false, 0)));
+    const cap = document.createElement('div');
+    cap.style.cssText = 'font-size:13px;color:var(--sage);margin-top:2px';
+    cap.textContent = '«' + word + '»';
+    el.appendChild(svg); el.appendChild(cap);
+  });
+}
+buildTables();
+render();
+</script>
+</body>
+</html>
