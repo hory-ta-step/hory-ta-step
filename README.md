@@ -10,14 +10,18 @@
 ## Швидкий старт
 
 ```bash
-pip install -r requirements.txt
+git clone https://github.com/truesysadmin/hory-ta-step-fonts.git
+cd hory-ta-step-fonts
+make setup      # один раз: створює .venv і ставить залежності
 make            # build + test + preview
 ```
 
 Готові шрифти з'являються у `fonts/`, зразки — у `docs/preview-*.png`.
+Докладніше про локальну роботу — у [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 | Ціль | Що робить |
 |---|---|
+| `make setup` | створює `.venv` і встановлює залежності |
 | `make build` | збирає всі гарнітури з `sources/` у `fonts/*.ttf` |
 | `make test` | smoke-тести: покриття абетки, лігатури, метрики, контури |
 | `make preview` | рендерить зразки текстів у `docs/` |
