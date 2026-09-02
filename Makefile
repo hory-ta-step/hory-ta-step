@@ -1,15 +1,24 @@
-.PHONY: build test preview clean all
+.PHONY: setup build test preview clean all
+
+# Якщо є локальне віртуальне середовище .venv — використовуємо його,
+# інакше системний python3.
+PY := $(shell test -x .venv/bin/python && echo .venv/bin/python || echo python3)
 
 all: build test preview
 
+setup:
+	python3 -m venv .venv
+	.venv/bin/pip install -r requirements.txt
+	@echo "Готово. Далі просто: make"
+
 build:
-	python3 tools/build.py
+	$(PY) tools/build.py
 
 test:
-	python3 -m pytest tests/ -q
+	$(PY) -m pytest tests/ -q
 
 preview:
-	python3 tools/preview.py
+	$(PY) tools/preview.py
 
 clean:
 	rm -rf fonts/*.ttf docs/preview-*.png

@@ -39,6 +39,11 @@ def make_fea(fam):
     апострофа лишається окремим знаком на кургані. Завиток м'якості після
     приголосного стає маркою під знаком. mkmk не потрібен: марки не
     накладаються з одного боку (одна голосна зверху, одна м'якість знизу).
+
+    Йотовані після приголосного (крім «й») розпадаються на вітер + голосну:
+    «ля» = л + завиток унизу + а вгорі. Після «й», м'якого знака, голосної,
+    апострофа чи на початку слова я/ю/є лишаються листком-й зі знаком угорі;
+    «ї» — завжди й+і.
     """
     def fx(x):
         return round(x * fam['scale'])
@@ -47,6 +52,8 @@ def make_fea(fam):
         return round((fam['baseY'] - y) * fam['scale'])
 
     cons = ' '.join(list(CONS_NAMES.values()) + ['dzhe', 'dze'])
+    cons_nj = ' '.join([n for n in CONS_NAMES.values() if n != 'yot']
+                       + ['dzhe', 'dze'])
     vow = ' '.join(VOW_NAMES.values())
     vmark = ' '.join(f'{n}.mark' for n in VOW_NAMES.values())
     top = f'<anchor {fx(20)} {fy(7)}>'   # центр поля голосної (y 0..14)
@@ -56,6 +63,7 @@ languagesystem DFLT dflt;
 languagesystem cyrl dflt;
 
 @CONS = [{cons}];
+@CONSNJ = [{cons_nj}];
 @VOW = [{vow}];
 @VOWMARK = [{vmark}];
 
@@ -67,6 +75,9 @@ feature liga {{
 feature calt {{
     sub @CONS soft' by soft.mark;
     sub [@CONS soft.mark] @VOW' by @VOWMARK;
+    sub @CONSNJ ya' by soft.mark a.mark;
+    sub @CONSNJ yu' by soft.mark u.mark;
+    sub @CONSNJ ye' by soft.mark e.mark;
 }} calt;
 
 markClass @VOWMARK {top} @TOP;
