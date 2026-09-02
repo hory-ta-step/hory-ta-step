@@ -119,6 +119,48 @@ def test_abugida_apostrophe_breaks_syllable(ttf_path):
     assert names == ['em', 'apostrophe', 'ya', 'che']
 
 
+def test_iotated_after_consonant_decomposes(ttf_path):
+    # я/ю/є після приголосного = вітер унизу + голосна вгорі
+    assert [n for n, _ in shape(ttf_path, 'ля')] == \
+        ['el', 'soft.mark', 'a.mark']
+    assert [n for n, _ in shape(ttf_path, 'нюх')] == \
+        ['en', 'soft.mark', 'u.mark', 'kha']
+    assert [n for n, _ in shape(ttf_path, 'сє')] == \
+        ['es', 'soft.mark', 'e.mark']
+
+
+def test_iotated_word_initial_standalone(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'яр')]
+    assert names == ['ya', 'er']
+
+
+def test_iotated_after_vowel_standalone(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'моя')]
+    assert names == ['em', 'o.mark', 'ya']
+
+
+def test_iotated_after_yot_standalone(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'йя')]
+    assert names == ['yot', 'ya']
+
+
+def test_iotated_after_softsign_standalone(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'лья')]
+    assert names == ['el', 'soft.mark', 'ya']
+
+
+def test_yi_never_decomposes(ttf_path):
+    # «ї» — завжди й+і, навіть одразу після приголосного
+    assert [n for n, _ in shape(ttf_path, 'тї')] == ['te', 'yi']
+    assert [n for n, _ in shape(ttf_path, 'воїн')] == \
+        ['ve', 'o.mark', 'yi', 'en']
+
+
+def test_iotated_double_consonant_word(ttf_path):
+    names = [n for n, _ in shape(ttf_path, 'рілля')]
+    assert names == ['er', 'i.mark', 'el', 'el', 'soft.mark', 'a.mark']
+
+
 def test_mark_positioning(ttf_path):
     (_, base_pos), (_, mark_pos) = shape(ttf_path, 'та')
     assert mark_pos.x_advance == 0
