@@ -13,8 +13,8 @@
 ## Налаштування (один раз)
 
 ```bash
-git clone https://github.com/hory-ta-step/hory-ta-step.github.io.git
-cd hory-ta-step-fonts
+git clone https://github.com/hory-ta-step/hory-ta-step.git
+cd hory-ta-step
 make setup        # створює .venv і ставить залежності
 ```
 
