@@ -124,6 +124,19 @@ section{padding:48px 0}
 .rule .ex{font-family:'HTS Drukovanyi';font-size:46px;color:var(--gold);margin-top:14px;line-height:1.4}
 .rule .cap{font-size:13px;color:var(--sage);font-style:italic}
 
+/* --- вертикаль «Гори» --- */
+.vert-card{
+  background:var(--moss);border:1px solid var(--line);border-radius:16px;
+  padding:26px;display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;
+}
+.vert-text{
+  writing-mode:vertical-rl;text-orientation:upright;
+  font-family:'HTS Drukovanyi';font-size:42px;line-height:1.5;
+  color:var(--gold);white-space:pre-line;height:320px;
+}
+.vert-note{flex:1;min-width:240px;font-size:15px;color:#CFC8B4}
+.vert-note code{color:var(--ivory)}
+
 /* --- стилі --- */
 .styles{display:grid;grid-template-columns:1fr;gap:14px}
 .style-card{background:var(--moss);border:1px solid var(--line);border-radius:16px;padding:20px 24px}
@@ -314,9 +327,26 @@ code{background:#1A261F;border:1px solid var(--line);border-radius:5px;padding:1
   <h2>Два способи письма</h2>
   <p class="sub">«Степом» — рядком за обрій, як на цій сторінці. «Горами» — вертикально:
   кожне слово здіймається колонкою, колонки читаються справа наліво, а слово, довше за
-  пасмо, перетікає далі через риску-місток. Вертикальний режим живе в
-  <a href="interactive.html">інтерактивному довіднику</a> — там-таки транслітератор,
-  повні таблиці знаків і анімоване письмо пером.</p>
+  пасмо, перетікає далі через риску-місток. Нижче — справжній вертикальний набір
+  цими-таки TTF: склади складаються й у колонках, а обрій-тире повертається
+  знаком гори.</p>
+  <div class="vert-card">
+    <div class="vert-text">Сонце
+заходить —
+гори
+чорніють</div>
+    <div class="vert-note">
+      <p>Це не малюнок: звичайний текст із <code>writing-mode:&nbsp;vertical-rl</code>
+      і <code>text-orientation:&nbsp;upright</code>. Кожен рядок — слово-колонка,
+      колонки біжать справа наліво.</p>
+      <p style="margin-top:10px">У вертикальному наборі шейпери вимикають
+      <code>calt</code>/<code>liga</code>, тому абугідні заміни продубльовано в
+      завжди-увімкнених <code>ccmp</code>/<code>rlig</code>, а фіча <code>vert</code>
+      повертає риски, трикрапку й дужки. Повна гра з вертикаллю — в
+      <a href="interactive.html">інтерактивному довіднику</a>: транслітератор,
+      таблиці знаків, анімоване письмо пером.</p>
+    </div>
+  </div>
 </section>
 
 <section>
