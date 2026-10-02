@@ -25,13 +25,15 @@ def font(ttf_path):
     return TTFont(ttf_path)
 
 
-def shape(ttf_path, text):
+def shape(ttf_path, text, direction=None):
     """(ім'я гліфа, позиція) після шейпінгу HarfBuzz."""
     order = TTFont(ttf_path).getGlyphOrder()
     hbfont = hb.Font(hb.Face(hb.Blob.from_file_path(str(ttf_path))))
     buf = hb.Buffer()
     buf.add_str(text)
     buf.guess_segment_properties()
+    if direction:
+        buf.direction = direction
     hb.shape(hbfont, buf)
     return [(order[i.codepoint], p)
             for i, p in zip(buf.glyph_infos, buf.glyph_positions)]
@@ -183,3 +185,51 @@ def test_mark_positioning(ttf_path):
     # якорі збігаються, тож марка повертається рівно на початок знака
     assert mark_pos.x_offset == -base_pos.x_advance
     assert mark_pos.y_offset == 0
+
+
+def test_vertical_tables_present(font):
+    assert 'vhea' in font and 'vmtx' in font, 'Відсутні vhea/vmtx'
+
+
+def test_vertical_advance_heights(font):
+    vmtx = font['vmtx']
+    cmap = font.getBestCmap()
+    cell = 84 * 11  # поле складу VCELL × scale
+    for ch in UKR:
+        assert vmtx[cmap[ord(ch)]][0] == cell, f'Висота клітинки {ch}'
+    for nm in MARKS:
+        assert vmtx[nm][0] == 0, f'Марка {nm} має ненульову висоту'
+
+
+def test_vertical_abugida_composes(ttf_path):
+    """ccmp/rlig працюють і в ttb, де calt/liga вимкнені HarfBuzz-ом."""
+    names = [n for n, _ in shape(ttf_path, 'джміль', 'ttb')]
+    assert names == ['dzhe', 'em', 'i.mark', 'el', 'soft.mark']
+    names = [n for n, _ in shape(ttf_path, 'ля', 'ttb')]
+    assert names == ['el', 'soft.mark', 'a.mark']
+
+
+def test_vertical_matches_horizontal(ttf_path):
+    text = "м'яч, її щастя — 25 дум"
+    ltr = [n for n, _ in shape(ttf_path, text)]
+    ttb = [n for n, _ in shape(ttf_path, text, 'ttb')]
+    subst = {'hyphen', 'endash', 'emdash', 'ellipsis', 'parenleft',
+             'parenright', 'guillemetleft', 'guillemetright'}
+    expected = [n + '.vert' if n in subst else n for n in ltr]
+    assert ttb == expected
+
+
+def test_vert_feature_rotates_punctuation(ttf_path):
+    names = [n for n, _ in shape(ttf_path, '(«що — так…»)', 'ttb')]
+    assert 'parenleft.vert' in names and 'emdash.vert' in names
+    assert 'ellipsis.vert' in names and 'guillemetright.vert' in names
+    ltr = [n for n, _ in shape(ttf_path, '(«що — так…»)')]
+    assert not any(n.endswith('.vert') for n in ltr), \
+        'vert не має діяти в горизонтальному наборі'
+
+
+def test_vertical_mark_advances_zero(ttf_path):
+    glyphs = shape(ttf_path, 'тьох', 'ttb')
+    advances = {n: p.y_advance for n, p in glyphs}
+    assert advances['te'] == advances['kha'] == -(84 * 11)
+    assert advances['soft.mark'] == advances['o.mark'] == 0

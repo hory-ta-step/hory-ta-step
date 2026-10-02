@@ -68,13 +68,40 @@ def draw_line(d, glyf, order, upm, hbfont, text, x, baseline, size, fill):
         pen += pos.x_advance * scale
 
 
+def draw_column(d, glyf, order, upm, hbfont, word, x_center, top, size, fill):
+    """Слово вертикальною колонкою (напрям ttb); повертає нижній край."""
+    scale = size / upm
+    buf = hb.Buffer()
+    buf.add_str(word)
+    buf.guess_segment_properties()
+    buf.direction = 'ttb'
+    hb.shape(hbfont, buf)
+    pen = top
+    for info, pos in zip(buf.glyph_infos, buf.glyph_positions):
+        g = glyf[order[info.codepoint]]
+        if g.numberOfContours > 0:
+            coords, ends, _ = g.getCoordinates(glyf)
+            start = 0
+            for end in ends:
+                pts = [(x_center + (gx + pos.x_offset) * scale,
+                        pen - (gy + pos.y_offset) * scale)
+                       for gx, gy in coords[start:end + 1]]
+                d.polygon(pts, fill=fill)
+                start = end + 1
+        pen += -pos.y_advance * scale
+    return pen
+
+
+VERT_PHRASE = "Реве та стогне Дніпр широкий"
+
+
 def main():
     DOCS.mkdir(exist_ok=True)
     ttfs = sorted(FONTS.glob('*.ttf'))
     if not ttfs:
         raise SystemExit('Спершу зберіть шрифти: make build')
     n_lines = sum(len(lns) for _, lns in SECTIONS)
-    height = 90 + len(SECTIONS) * 46 + n_lines * 160
+    height = 90 + len(SECTIONS) * 46 + n_lines * 160 + 360
     for ttf in ttfs:
         tt = TTFont(ttf)
         glyf = tt['glyf']
@@ -98,6 +125,19 @@ def main():
                 draw_line(d, glyf, order, upm, hbfont, ln, 50, baseline, size, INK)
                 d.text((50, y + 104), ln, font=cap, fill=CAPTION)
                 y += 160
+        # Вертикаль «Гори»: слово = колонка, колонки справа наліво
+        d.text((50, y), 'ВЕРТИКАЛЬ «ГОРИ»', font=cap, fill=CAPTION)
+        y += 46
+        adv_px = 506 / upm * size
+        x = 50 + len(VERT_PHRASE.split()) * (adv_px + 26) - 26
+        bottom = y
+        for word in VERT_PHRASE.split():
+            b = draw_column(d, glyf, order, upm, hbfont, word,
+                            x, y, size, INK)
+            bottom = max(bottom, b)
+            x -= adv_px + 26
+        d.text((50, bottom + 16), VERT_PHRASE + '  (колонки справа наліво)',
+               font=cap, fill=CAPTION)
         out = DOCS / f'preview-{ttf.stem}.png'
         img.save(out)
         print(f'  ✓ {out.relative_to(ROOT)}')

@@ -36,6 +36,11 @@ PUNCT_NAMES = {'.': 'period', ',': 'comma', '!': 'exclam', '?': 'question',
                '(': 'parenleft', ')': 'parenright',
                '«': 'guillemetleft', '»': 'guillemetright'}
 NARROW = {'period', 'comma', 'apostrophe', 'colon', 'semicolon'}
+# Пунктуація, що у вертикальному режимі повертається на 90° (фіча vert)
+VERT_ROTATE = ('hyphen', 'endash', 'emdash', 'ellipsis', 'parenleft',
+               'parenright', 'guillemetleft', 'guillemetright')
+# Клітинка складу у вертикальній колонці — повне поле 84 од. дизайну
+VCELL = 84
 
 def make_fea(fam):
     """OpenType-фічі: лігатури, абугідні заміни (calt) та якорі (mark).
@@ -50,6 +55,13 @@ def make_fea(fam):
     «ля» = л + завиток унизу + а вгорі. Після «й», м'якого знака, голосної,
     апострофа чи на початку слова я/ю/є лишаються листком-й зі знаком угорі;
     «ї» — завжди й+і.
+
+    Абугідні заміни й лігатури — спільні lookup-и, підключені одночасно до
+    calt/liga (горизонтальний текст) і до ccmp/rlig: останні HarfBuzz
+    застосовує в ОБОХ напрямках, тож склади складаються й у вертикальних
+    колонках («Гори»), де calt/liga вимкнені. Подвійне застосування
+    безпечне: після ccmp/rlig правилам calt/liga вже нема що міняти.
+    Фіча vert повертає риски, трикрапку й дужки для вертикального письма.
     """
     def fx(x):
         return round(x * fam['scale'])
@@ -64,6 +76,7 @@ def make_fea(fam):
     vmark = ' '.join(f'{n}.mark' for n in VOW_NAMES.values())
     top = f'<anchor {fx(20)} {fy(7)}>'   # центр поля голосної (y 0..14)
     bot = f'<anchor {fx(20)} {fy(72)}>'  # центр поля м'якості (y 66..78)
+    vert_subs = '\n    '.join(f'sub {n} by {n}.vert;' for n in VERT_ROTATE)
     return f"""
 languagesystem DFLT dflt;
 languagesystem cyrl dflt;
@@ -73,18 +86,27 @@ languagesystem cyrl dflt;
 @VOW = [{vow}];
 @VOWMARK = [{vmark}];
 
-feature liga {{
+lookup DZLIG {{
     sub de zhe by dzhe;
     sub de ze by dze;
-}} liga;
+}} DZLIG;
 
-feature calt {{
+lookup ABUGIDA {{
     sub @CONS soft' by soft.mark;
     sub [@CONS soft.mark] @VOW' by @VOWMARK;
     sub @CONSNJ ya' by soft.mark a.mark;
     sub @CONSNJ yu' by soft.mark u.mark;
     sub @CONSNJ ye' by soft.mark e.mark;
-}} calt;
+}} ABUGIDA;
+
+feature rlig {{ lookup DZLIG; }} rlig;
+feature liga {{ lookup DZLIG; }} liga;
+feature ccmp {{ lookup ABUGIDA; }} ccmp;
+feature calt {{ lookup ABUGIDA; }} calt;
+
+feature vert {{
+    {vert_subs}
+}} vert;
 
 markClass @VOWMARK {top} @TOP;
 markClass soft.mark {bot} @BOTTOM;
@@ -147,6 +169,11 @@ def build_style(fam, gset, style_name, cfg, out_dir):
     add('apostrophe', [(punct["'"], 16, r_mark)])
     cmap[0x2019] = 'apostrophe'
     cmap[0x0027] = 'apostrophe'
+    # Вертикальні варіанти пунктуації (фіча vert): той самий контур,
+    # повернутий на 90° за годинниковою навколо центру поля знака
+    punct_char = {nm: ch for ch, nm in PUNCT_NAMES.items()}
+    for nm in VERT_ROTATE:
+        add(f'{nm}.vert', [(punct[punct_char[nm]], 16, r_mark, True)])
 
     order = ['.notdef', 'space'] + list(glyph_parts.keys())
     fb = FontBuilder(fam['upm'], isTTF=True)
@@ -163,9 +190,14 @@ def build_style(fam, gset, style_name, cfg, out_dir):
 
     for name, parts in glyph_parts.items():
         pen = TTGlyphPen(None)
-        for d, ty, r in parts:
+        for part in parts:
+            d, ty, r = part[:3]
+            rotate = len(part) > 3 and part[3]
             for sub in parse_subpaths(d):
                 shifted = [(x, y + ty) for x, y in sub]
+                if rotate:  # 90° за годинниковою навколо центру поля (20, 40)
+                    shifted = [(20 - (y - 40), 40 + (x - 20))
+                               for x, y in shifted]
                 poly = stroke_poly(shifted, r, cap=cap)
                 pen.moveTo((fx(poly[0][0]), fy(poly[0][1])))
                 for p in poly[1:]:
@@ -183,6 +215,23 @@ def build_style(fam, gset, style_name, cfg, out_dir):
     fb.setupGlyf(glyphs)
     fb.setupHorizontalMetrics(metrics)
     fb.setupHorizontalHeader(ascent=fam['ascent'], descent=fam['descent'])
+
+    # Вертикальний режим «Гори»: склад = клітинка VCELL од. дизайну.
+    # Вертикальний початок гліфа — на ascent (так рахує HarfBuzz для TTF),
+    # tsb вирівнює контур у клітинці так само, як у горизонтальному наборі.
+    v_adv = round(VCELL * scale)
+    vmetrics = {}
+    for name, g in glyphs.items():
+        coords = getattr(g, 'coordinates', None)
+        tsb = fam['ascent'] - max(y for _, y in coords) if coords else 0
+        if name.endswith('.mark'):
+            vmetrics[name] = (0, tsb)
+        elif name == 'space':
+            vmetrics[name] = (fam['narrowAdvance'], 0)
+        else:
+            vmetrics[name] = (v_adv, tsb)
+    fb.setupVerticalMetrics(vmetrics)
+    fb.setupVerticalHeader(ascent=adv // 2, descent=-(adv - adv // 2))
     ps = f"{fam['familyPs']}-{style_name}"
     fb.setupNameTable({
         'familyName': fam['family'],
