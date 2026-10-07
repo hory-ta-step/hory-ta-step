@@ -70,6 +70,17 @@ section{padding:40px 0}
   padding:8px 4px;outline:none;
 }
 .demo textarea:focus{border-bottom-color:var(--gold)}
+
+/* --- кнопки розділових знаків під полем --- */
+.keys{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:12px 0 0}
+.keys .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sage);margin-right:6px}
+.keys button{
+  font-family:'IBM Plex Sans',sans-serif;font-size:18px;line-height:1;
+  min-width:36px;height:36px;padding:0 8px;border:1px solid var(--line);
+  border-radius:10px;background:transparent;color:var(--ivory);cursor:pointer;
+}
+.keys button:hover{border-color:var(--gold);color:var(--gold)}
+.keys button:focus-visible{outline:3px solid var(--ivory);outline-offset:2px}
 .modes{display:flex;gap:8px;margin:16px 0 4px;flex-wrap:wrap}
 .modes button{
   font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;
@@ -128,6 +139,9 @@ code{background:#1A261F;border:1px solid var(--line);border-radius:5px;padding:1
   <div class="demo">
     <label for="inp" style="font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--sage)">Введіть текст українською</label>
     <textarea id="inp" spellcheck="false">Реве та стогне Дніпр широкий, сердитий вітер завива. Рік 1847 — «Кобзар»; 25 дум…</textarea>
+    <div class="keys" id="keys" role="group" aria-label="Вставити розділовий знак">
+      <span class="lbl">Знаки</span>
+    </div>
     <div class="modes" role="group" aria-label="Режим письма">
       <button id="btnH" aria-pressed="true">🌾 Степ — горизонтально</button>
       <button id="btnV" aria-pressed="false">⛰ Гори — вертикально</button>
@@ -607,6 +621,23 @@ let mode = 'h';
 let debounce;
 document.getElementById('inp').addEventListener('input', () => {
   clearTimeout(debounce); debounce = setTimeout(render, 250);
+});
+const inp = document.getElementById('inp');
+// Розділові знаки, яких нема на клавіатурі: кнопка вставляє знак у поле
+const KEYS = [[',','кома'],['.','крапка'],[':','двокрапка'],[';','крапка з комою'],
+  ['!','знак оклику'],['?','знак питання'],['’','апостроф'],['-','дефіс'],
+  ['–','коротке тире'],['—','довге тире'],['…','багатокрапка'],
+  ['«','лапки відкриті'],['»','лапки закриті'],['(','дужка відкрита'],[')','дужка закрита']];
+const keys = document.getElementById('keys');
+KEYS.forEach(([ch, name]) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = ch; b.title = name; b.setAttribute('aria-label', name);
+  b.onclick = () => {
+    inp.setRangeText(ch, inp.selectionStart, inp.selectionEnd, 'end');
+    inp.focus();
+    inp.dispatchEvent(new Event('input'));
+  };
+  keys.appendChild(b);
 });
 const bH = document.getElementById('btnH'), bV = document.getElementById('btnV');
 bH.onclick = () => { mode='h'; bH.setAttribute('aria-pressed','true'); bV.setAttribute('aria-pressed','false'); render(); };

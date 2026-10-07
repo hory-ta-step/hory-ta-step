@@ -82,6 +82,17 @@ section{padding:48px 0}
   padding:8px 4px;outline:none;
 }
 #demo textarea:focus{border-bottom-color:var(--gold)}
+
+/* --- кнопки розділових знаків під полем --- */
+.keys{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:12px 0 0}
+.keys .lbl{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--sage);margin-right:6px}
+.keys button{
+  font-family:'IBM Plex Sans',sans-serif;font-size:18px;line-height:1;
+  min-width:36px;height:36px;padding:0 8px;border:1px solid var(--line);
+  border-radius:10px;background:transparent;color:var(--ivory);cursor:pointer;
+}
+.keys button:hover{border-color:var(--gold);color:var(--gold)}
+.keys button:focus-visible{outline:3px solid var(--ivory);outline-offset:2px}
 .modes{display:flex;gap:8px;margin:18px 0 6px;flex-wrap:wrap;align-items:center}
 .modes button{
   font-family:'IBM Plex Sans',sans-serif;font-size:14px;font-weight:600;
@@ -199,9 +210,13 @@ code{background:#1A261F;border:1px solid var(--line);border-radius:5px;padding:1
   <h2>Живе демо</h2>
   <p class="sub">Це не картинка — справжні шрифти працюють просто у вашому браузері.
   Абугідні перетворення виконує OpenType: голосна сідає зорею над приголосним,
-  м'якість в'ється вітром під ним. Наберіть щось українською.</p>
+  м'якість в'ється вітром під ним. Наберіть щось українською; розділові знаки,
+  яких нема на клавіатурі, — кнопками під полем.</p>
   <div class="card">
     <textarea id="inp" spellcheck="false">Чуєш їх, доцю, га? Кумедна ж ти, прощайся без ґольфів! Рік 1847 — «Кобзар»; 25 дум…</textarea>
+    <div class="keys" id="keys" role="group" aria-label="Вставити розділовий знак">
+      <span class="lbl">Знаки</span>
+    </div>
     <div class="modes" role="group" aria-label="Накреслення">
       <button data-f="f-druk" aria-pressed="true">🖨 Друкований</button>
       <button data-f="f-ruko" aria-pressed="false">✒ Рукописний</button>
@@ -373,6 +388,22 @@ code{background:#1A261F;border:1px solid var(--line);border-radius:5px;padding:1
 const out = document.getElementById('out');
 const inp = document.getElementById('inp');
 inp.addEventListener('input', () => { out.textContent = inp.value || ' '; });
+// Розділові знаки, яких нема на клавіатурі: кнопка вставляє знак у поле
+const KEYS = [[',','кома'],['.','крапка'],[':','двокрапка'],[';','крапка з комою'],
+  ['!','знак оклику'],['?','знак питання'],['’','апостроф'],['-','дефіс'],
+  ['–','коротке тире'],['—','довге тире'],['…','багатокрапка'],
+  ['«','лапки відкриті'],['»','лапки закриті'],['(','дужка відкрита'],[')','дужка закрита']];
+const keys = document.getElementById('keys');
+KEYS.forEach(([ch, name]) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = ch; b.title = name; b.setAttribute('aria-label', name);
+  b.onclick = () => {
+    inp.setRangeText(ch, inp.selectionStart, inp.selectionEnd, 'end');
+    inp.focus();
+    inp.dispatchEvent(new Event('input'));
+  };
+  keys.appendChild(b);
+});
 const fbtns = [...document.querySelectorAll('.modes button[data-f]')];
 fbtns.forEach(b => b.onclick = () => {
   fbtns.forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
